@@ -1,6 +1,5 @@
 package com.example.networkapp
 
-import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
@@ -14,27 +13,22 @@ import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import com.squareup.picasso.Picasso
 import org.json.JSONObject
-
-private const val LAST_COMIC_KEY = "last_comic_json"
+import java.io.*
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var requestQueue: RequestQueue
-
     private lateinit var titleTextView: TextView
     private lateinit var descriptionTextView: TextView
     private lateinit var numberEditText: EditText
     private lateinit var showButton: Button
     private lateinit var comicImageView: ImageView
-
-    private lateinit var preferences: SharedPreferences
+    private lateinit var cacheFile: File
+    private val cacheFileName = "last_comic.json"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        // Get preferences for this activity
-        preferences = getPreferences(MODE_PRIVATE)
 
         requestQueue = Volley.newRequestQueue(this)
 
@@ -44,25 +38,25 @@ class MainActivity : AppCompatActivity() {
         showButton = findViewById(R.id.showComicButton)
         comicImageView = findViewById(R.id.comicImageView)
 
+        // create reference to cache file in internal storage
+        cacheFile = File(filesDir, cacheFileName)
+
+        // 🔹 On startup: if cache file exists, load and display cached comic
+        if (cacheFile.exists()) {
+            loadCachedComic()
+        }
+
         showButton.setOnClickListener {
             val idText = numberEditText.text.toString().trim()
-
-            if (idText.isEmpty()) {
-                Toast.makeText(this, "Please enter a comic number.", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
             val idNum = idText.toIntOrNull()
+
             if (idNum == null || idNum <= 0) {
-                Toast.makeText(this, "Please enter a valid positive number.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Please enter a valid comic number.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             downloadComic(idNum.toString())
         }
-
-        // Load previously saved comic when app starts
-        loadSavedComic()
     }
 
     // Fetches comic from web as JSONObject
@@ -74,9 +68,7 @@ class MainActivity : AppCompatActivity() {
             url,
             null,
             { jsonObject ->
-                // Show the comic
                 showComic(jsonObject)
-                // Save the comic when downloaded
                 saveComic(jsonObject)
             },
             { error ->
@@ -103,29 +95,43 @@ class MainActivity : AppCompatActivity() {
             comicImageView.setImageDrawable(null)
         }
 
-        // Also update the EditText to match this comic number (if present)
+        // Also update the EditText to match this comic number
         val num = comicObject.optInt("num", 0)
         if (num != 0) {
             numberEditText.setText(num.toString())
         }
     }
 
-    // Save comic info when downloaded
+    // Save comic JSON to cache file
     private fun saveComic(comicObject: JSONObject) {
-        val editor = preferences.edit()
-        editor.putString(LAST_COMIC_KEY, comicObject.toString())
-        editor.apply()
-    }
-
-    // Load previously saved comic when app starts
-    private fun loadSavedComic() {
-        val lastComicJson = preferences.getString(LAST_COMIC_KEY, null) ?: return
-
         try {
-            val comicObject = JSONObject(lastComicJson)
-            showComic(comicObject)
+            val outputStream = FileOutputStream(cacheFile)
+            outputStream.write(comicObject.toString().toByteArray())
+            outputStream.close()
         } catch (e: Exception) {
             e.printStackTrace()
+            Toast.makeText(this, "Failed to save comic.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Load comic JSON from cache file and display it
+    private fun loadCachedComic() {
+        try {
+            val br = BufferedReader(FileReader(cacheFile))
+            val text = StringBuilder()
+            var line: String?
+
+            while (br.readLine().also { line = it } != null) {
+                text.append(line)
+            }
+            br.close()
+
+            val json = JSONObject(text.toString())
+            showComic(json)
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "Failed to load cached comic.", Toast.LENGTH_SHORT).show()
         }
     }
 }
