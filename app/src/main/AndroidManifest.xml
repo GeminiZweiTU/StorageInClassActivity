@@ -22,9 +22,11 @@
 
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
-                <data android:scheme="https" android:mimeType="text/html"/>
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="xkcd.com" />
             </intent-filter>
         </activity>
     </application>

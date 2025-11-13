@@ -27,13 +27,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var showButton: Button
     private lateinit var comicImageView: ImageView
 
-    //keep a SharedPreferences field
     private lateinit var preferences: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Get preferences for this activity
         preferences = getPreferences(MODE_PRIVATE)
 
         requestQueue = Volley.newRequestQueue(this)
@@ -61,6 +61,7 @@ class MainActivity : AppCompatActivity() {
             downloadComic(idNum.toString())
         }
 
+        // Load previously saved comic when app starts
         loadSavedComic()
     }
 
@@ -75,7 +76,7 @@ class MainActivity : AppCompatActivity() {
             { jsonObject ->
                 // Show the comic
                 showComic(jsonObject)
-                // Save the comic JSON (similar to saving text/file in storageapp)
+                // Save the comic when downloaded
                 saveComic(jsonObject)
             },
             { error ->
@@ -109,7 +110,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Save comic info when downloaded (similar idea to onStop file save in storageapp)
+    // Save comic info when downloaded
     private fun saveComic(comicObject: JSONObject) {
         val editor = preferences.edit()
         editor.putString(LAST_COMIC_KEY, comicObject.toString())
