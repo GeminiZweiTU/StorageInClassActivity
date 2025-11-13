@@ -1,5 +1,6 @@
 package com.example.networkapp
 
+import android.content.SharedPreferences
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
@@ -14,18 +15,26 @@ import com.android.volley.toolbox.Volley
 import com.squareup.picasso.Picasso
 import org.json.JSONObject
 
+private const val LAST_COMIC_KEY = "last_comic_json"
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var requestQueue: RequestQueue
+
     private lateinit var titleTextView: TextView
     private lateinit var descriptionTextView: TextView
     private lateinit var numberEditText: EditText
     private lateinit var showButton: Button
     private lateinit var comicImageView: ImageView
 
+    //keep a SharedPreferences field
+    private lateinit var preferences: SharedPreferences
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        preferences = getPreferences(MODE_PRIVATE)
 
         requestQueue = Volley.newRequestQueue(this)
 
@@ -52,7 +61,6 @@ class MainActivity : AppCompatActivity() {
             downloadComic(idNum.toString())
         }
 
-        // TODO (3): Load previously saved comic automatically
         loadSavedComic()
     }
 
@@ -65,9 +73,9 @@ class MainActivity : AppCompatActivity() {
             url,
             null,
             { jsonObject ->
-                // Show it
+                // Show the comic
                 showComic(jsonObject)
-                // TODO (2): Save it
+                // Save the comic JSON (similar to saving text/file in storageapp)
                 saveComic(jsonObject)
             },
             { error ->
@@ -94,31 +102,28 @@ class MainActivity : AppCompatActivity() {
             comicImageView.setImageDrawable(null)
         }
 
-        // Also update the EditText to match this comic (if num is present)
+        // Also update the EditText to match this comic number (if present)
         val num = comicObject.optInt("num", 0)
         if (num != 0) {
             numberEditText.setText(num.toString())
         }
     }
 
-    // TODO (2): Implement this function - save comic info when downloaded
+    // Save comic info when downloaded (similar idea to onStop file save in storageapp)
     private fun saveComic(comicObject: JSONObject) {
-        val prefs = getSharedPreferences("xkcd_prefs", MODE_PRIVATE)
-        prefs.edit()
-            .putString("lastComicJson", comicObject.toString())
-            .apply()
+        val editor = preferences.edit()
+        editor.putString(LAST_COMIC_KEY, comicObject.toString())
+        editor.apply()
     }
 
-    // Helper for TODO (3): Load previously saved comic when app starts
+    // Load previously saved comic when app starts
     private fun loadSavedComic() {
-        val prefs = getSharedPreferences("xkcd_prefs", MODE_PRIVATE)
-        val lastComicJson = prefs.getString("lastComicJson", null) ?: return
+        val lastComicJson = preferences.getString(LAST_COMIC_KEY, null) ?: return
 
         try {
-            val jsonObject = JSONObject(lastComicJson)
-            showComic(jsonObject)
+            val comicObject = JSONObject(lastComicJson)
+            showComic(comicObject)
         } catch (e: Exception) {
-            // If parse fails, just ignore and start empty
             e.printStackTrace()
         }
     }
